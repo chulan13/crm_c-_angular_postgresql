@@ -1,0 +1,208 @@
+<main class="page-shell">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="CRM home">
+      <span class="brand-mark">C</span>
+      <span>Система задач</span>
+    </a>
+    <div class="connection"><span class="connection-dot"></span> CRM API</div>
+  </header>
+
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">РОБОЧИЙ ПРОСТІР</p>
+      <h1>Задачі</h1>
+    </div>
+    <button class="button button-primary" type="button" (click)="startCreate()">
+      <span class="plus">+</span> Нова задача
+    </button>
+  </section>
+
+  <section class="summary-grid" aria-label="Зведення по задачах">
+    <article class="summary-card">
+      <span class="summary-label">Усього задач</span>
+      <strong>{{ tasks.length }}</strong>
+      <span class="summary-icon icon-violet">≡</span>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Нові</span>
+      <strong>{{ countByStatus('Новий') }}</strong>
+      <span class="summary-icon icon-blue">✳</span>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">У роботі</span>
+      <strong>{{ countByStatus('В роботі') }}</strong>
+      <span class="summary-icon icon-amber">◷</span>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Виконано</span>
+      <strong>{{ countByStatus('Виконано') }}</strong>
+      <span class="summary-icon icon-green">✓</span>
+    </article>
+  </section>
+
+  @if (pageError) {
+    <div class="notice notice-error" role="alert">
+      <span>{{ pageError }}</span>
+      <button class="notice-close" type="button" aria-label="Закрити" (click)="pageError = ''">×</button>
+    </div>
+  }
+  @if (successMessage) {
+    <div class="notice notice-success" role="status">{{ successMessage }}</div>
+  }
+
+  <section class="tasks-panel">
+    <div class="panel-toolbar">
+      <div>
+        <h2>Усі задачі <span class="count-pill">{{ filteredTasks.length }}</span></h2>
+        <p>Перегляд і керування задачами CRM</p>
+      </div>
+      <div class="filters">
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            placeholder="Пошук задачі..."
+            aria-label="Пошук задач"
+            [value]="searchText"
+            (input)="setSearch($event)">
+        </label>
+        <select aria-label="Фільтр за статусом" [value]="statusFilter" (change)="setStatusFilter($event)">
+          <option value="">Усі статуси</option>
+          @for (status of statuses; track status.id) {
+            <option [value]="status.id">{{ status.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    @if (loading) {
+      <div class="empty-state"><span class="spinner"></span><p>Завантаження задач...</p></div>
+    } @else if (filteredTasks.length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">▤</div>
+        <h3>{{ tasks.length ? 'Нічого не знайдено' : 'Поки що немає задач' }}</h3>
+        <p>{{ tasks.length ? 'Змініть пошуковий запит або фільтр.' : 'Створіть першу задачу, щоб почати роботу.' }}</p>
+        @if (!tasks.length) {
+          <button class="button button-primary" type="button" (click)="startCreate()">Створити задачу</button>
+        }
+      </div>
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Задача</th>
+              <th>Статус</th>
+              <th>Відділ</th>
+              <th>Відповідальний</th>
+              <th>Термін</th>
+              <th><span class="visually-hidden">Дії</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (task of filteredTasks; track task.id) {
+              <tr>
+                <td>
+                  <div class="task-name">{{ task.name || 'Без назви' }}</div>
+                  @if (task.description) {
+                    <div class="task-description">{{ task.description }}</div>
+                  }
+                </td>
+                <td data-label="Статус"><span [class]="'status-badge ' + statusClass(task.status_id)">{{ statusName(task.status_id) }}</span></td>
+                <td data-label="Відділ">{{ departmentName(task.department_id) }}</td>
+                <td data-label="Відповідальний">{{ task.assignee || '—' }}</td>
+                <td data-label="Термін" [class.overdue]="isOverdue(task.deadline, task.status_id)">{{ formatDate(task.deadline) }}</td>
+                <td class="row-actions">
+                  <button class="icon-button" type="button" title="Редагувати" aria-label="Редагувати задачу" (click)="startEdit(task)">✎</button>
+                  <button class="icon-button danger-action" type="button" title="Видалити" aria-label="Видалити задачу" (click)="deleteTask(task)">⌫</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</main>
+
+@if (formOpen) {
+  <div class="modal-backdrop" (click)="closeForm()">
+    <section class="task-modal" role="dialog" aria-modal="true" aria-labelledby="form-title" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">{{ editingId ? 'ОНОВЛЕННЯ' : 'НОВА ЗАДАЧА' }}</p>
+          <h2 id="form-title">{{ editingId ? 'Редагувати задачу' : 'Створити задачу' }}</h2>
+        </div>
+        <button class="icon-button modal-close" type="button" aria-label="Закрити форму" (click)="closeForm()">×</button>
+      </header>
+
+      @if (formError) {
+        <div class="notice notice-error form-notice" role="alert">{{ formError }}</div>
+      }
+
+      <form [formGroup]="taskForm" (ngSubmit)="saveTask()" novalidate>
+        <label class="field full-field">
+          <span>Назва задачі <b>*</b></span>
+          <input formControlName="name" type="text" placeholder="Наприклад, підготувати звіт">
+          @if (isInvalid('name')) { <small class="field-error">Вкажіть назву задачі.</small> }
+        </label>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Статус</span>
+            <select formControlName="statusId">
+              <option value="">Не вибрано</option>
+              @for (status of statuses; track status.id) {
+                <option [value]="status.id">{{ status.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Відділ</span>
+            <select formControlName="departmentId">
+              <option value="">Не вибрано</option>
+              @for (department of departments; track department.id) {
+                <option [value]="department.id">{{ department.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Відповідальний</span>
+            <input formControlName="assignee" type="text" placeholder="Ім'я та прізвище">
+          </label>
+          <label class="field">
+            <span>Термін виконання</span>
+            <input formControlName="deadline" type="date">
+          </label>
+        </div>
+
+        <label class="field full-field">
+          <span>Опис</span>
+          <textarea formControlName="description" rows="3" placeholder="Деталі задачі"></textarea>
+        </label>
+
+        @if (isCancelled) {
+          <label class="field full-field">
+            <span>Причина скасування <b>*</b></span>
+            <textarea formControlName="cancelReason" rows="3" maxlength="250" placeholder="Вкажіть причину скасування"></textarea>
+            <div class="field-hint-row">
+              @if (isInvalid('cancelReason')) {
+                <small class="field-error">Для скасованої задачі потрібно вказати причину.</small>
+              } @else {
+                <span></span>
+              }
+              <small>{{ taskForm.controls['cancelReason'].value.length }}/250</small>
+            </div>
+          </label>
+        }
+
+        <footer class="form-actions">
+          <button class="button button-secondary" type="button" (click)="closeForm()">Скасувати</button>
+          <button class="button button-primary" type="submit" [disabled]="saving">
+            {{ saving ? 'Збереження...' : (editingId ? 'Зберегти зміни' : 'Створити задачу') }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+}

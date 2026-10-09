@@ -1,0 +1,16 @@
+@abcomm_test_HostAddress = http://localhost:5283
+
+GET {{abcomm_test_HostAddress}}/CrmTask
+Accept: application/json
+
+###
+
+GET {{abcomm_test_HostAddress}}/Department
+Accept: application/json
+
+###
+
+GET {{abcomm_test_HostAddress}}/Status
+Accept: application/json
+
+###

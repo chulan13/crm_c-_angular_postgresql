@@ -1,0 +1,14 @@
+{
+  "/CrmTask": {
+    "target": "http://localhost:5283",
+    "changeOrigin": true
+  },
+  "/Department": {
+    "target": "http://localhost:5283",
+    "changeOrigin": true
+  },
+  "/Status": {
+    "target": "http://localhost:5283",
+    "changeOrigin": true
+  }
+}
