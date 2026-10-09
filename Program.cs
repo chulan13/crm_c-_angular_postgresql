@@ -12,6 +12,13 @@ builder.Services.AddDbContext<CrmDbContext>(options =>
 
 var app = builder.Build();
 
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var database = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    await CsvDataInitializer.InitializeAsync(database, app.Environment.ContentRootPath, logger);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
